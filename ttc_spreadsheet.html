@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TTC Performance Spreadsheet</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 30px;
+            overflow-x: auto;
+            display: block;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f2f2f2;
+            position: sticky;
+            top: 0;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .frame-col {
+            font-weight: bold;
+            background-color: #e6e6e6;
+            position: sticky;
+            left: 0;
+        }
+        .highlight-min {
+            background-color: #ffcccc;
+        }
+        .highlight-max {
+            background-color: #ccffcc;
+        }
+        .controls {
+            margin-bottom: 20px;
+        }
+        button {
+            padding: 5px 10px;
+            margin-right: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>TTC Performance Spreadsheet</h1>
+    
+    <div class="controls">
+        <button onclick="highlightMinMax()">Highlight Min/Max Values</button>
+        <button onclick="resetHighlights()">Reset Highlights</button>
+    </div>
+    
+    <div id="tableContainer">
+        <!-- Table will be inserted here by JavaScript -->
+        <p>Loading data...</p>
+    </div>
+    
+    <script>
+        // Load the CSV data
+        fetch('TTC_Performance_Eval2.csv')
+            .then(response => response.text())
+            .then(data => {
+                // Parse CSV
+                const rows = data.trim().split('\n');
+                const headers = rows[0].split(',');
+                
+                // Create table
+                let tableHtml = '<table id="ttcTable">';
+                
+                // Add header row
+                tableHtml += '<tr><th class="frame-col">Frame</th>';
+                for (let i = 1; i < headers.length; i++) {
+                    tableHtml += `<th>${headers[i]}</th>`;
+                }
+                tableHtml += '</tr>';
+                
+                // Add data rows
+                for (let i = 1; i < rows.length; i++) {
+                    const values = rows[i].split(',');
+                    tableHtml += `<tr><td class="frame-col">${values[0]}</td>`;
+                    
+                    for (let j = 1; j < values.length; j++) {
+                        tableHtml += `<td>${values[j]}</td>`;
+                    }
+                    
+                    tableHtml += '</tr>';
+                }
+                
+                tableHtml += '</table>';
+                
+                // Insert table into the page
+                document.getElementById('tableContainer').innerHTML = tableHtml;
+            })
+            .catch(error => {
+                console.error('Error loading data:', error);
+                document.getElementById('tableContainer').innerHTML = '<p>Error loading data. Please check the console for details.</p>';
+            });
+        
+        // Function to highlight min and max values in each row
+        function highlightMinMax() {
+            const table = document.getElementById('ttcTable');
+            if (!table) return;
+            
+            const rows = table.getElementsByTagName('tr');
+            
+            // Skip header row
+            for (let i = 1; i < rows.length; i++) {
+                const cells = rows[i].getElementsByTagName('td');
+                
+                // Skip frame column
+                let min = Infinity;
+                let max = -Infinity;
+                let minIndex = -1;
+                let maxIndex = -1;
+                
+                // Find min and max values
+                for (let j = 1; j < cells.length; j++) {
+                    const value = parseFloat(cells[j].textContent);
+                    if (value < min) {
+                        min = value;
+                        minIndex = j;
+                    }
+                    if (value > max) {
+                        max = value;
+                        maxIndex = j;
+                    }
+                }
+                
+                // Highlight min and max
+                if (minIndex !== -1) cells[minIndex].classList.add('highlight-min');
+                if (maxIndex !== -1) cells[maxIndex].classList.add('highlight-max');
+            }
+        }
+        
+        // Function to reset highlights
+        function resetHighlights() {
+            const table = document.getElementById('ttcTable');
+            if (!table) return;
+            
+            const cells = table.getElementsByTagName('td');
+            for (let i = 0; i < cells.length; i++) {
+                cells[i].classList.remove('highlight-min');
+                cells[i].classList.remove('highlight-max');
+            }
+        }
+    </script>
+</body>
+</html>

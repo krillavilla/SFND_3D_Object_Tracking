@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>TTC Performance Visualization</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .chart-container {
+            width: 100%;
+            height: 500px;
+            margin-bottom: 30px;
+        }
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        tr:nth-child(even) {
+            background-color: #f9f9f9;
+        }
+        .combo-selector {
+            margin-bottom: 20px;
+        }
+        select {
+            padding: 5px;
+            margin-right: 10px;
+        }
+        button {
+            padding: 5px 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>TTC Performance Evaluation</h1>
+    
+    <h2>All Detector/Descriptor Combinations</h2>
+    <div class="chart-container">
+        <canvas id="allCombinationsChart"></canvas>
+    </div>
+    
+    <h2>Compare Specific Combinations</h2>
+    <div class="combo-selector">
+        <select id="combo1">
+            <!-- Will be populated by JavaScript -->
+        </select>
+        <select id="combo2">
+            <!-- Will be populated by JavaScript -->
+        </select>
+        <select id="combo3">
+            <!-- Will be populated by JavaScript -->
+        </select>
+        <button onclick="updateComparisonChart()">Compare</button>
+    </div>
+    <div class="chart-container">
+        <canvas id="comparisonChart"></canvas>
+    </div>
+    
+    <h2>Performance Statistics</h2>
+    <table id="statsTable">
+        <tr>
+            <th>Detector</th>
+            <th>Descriptor</th>
+            <th>Mean TTC</th>
+            <th>Std Dev</th>
+            <th>Min TTC</th>
+            <th>Max TTC</th>
+        </tr>
+        <!-- Will be populated by JavaScript -->
+    </table>
+    
+    <script>
+        // Load the CSV data
+        fetch('TTC_Performance_Eval2.csv')
+            .then(response => response.text())
+            .then(data => {
+                // Parse CSV
+                const rows = data.trim().split('\n');
+                const headers = rows[0].split(',');
+                const frameIndex = headers.indexOf('Frame');
+                
+                // Extract combinations
+                const combinations = headers.slice(1);
+                
+                // Parse data
+                const frameData = [];
+                const ttcData = {};
+                
+                combinations.forEach(combo => {
+                    ttcData[combo] = [];
+                });
+                
+                for (let i = 1; i < rows.length; i++) {
+                    const values = rows[i].split(',');
+                    const frame = parseInt(values[frameIndex]);
+                    frameData.push(frame);
+                    
+                    combinations.forEach((combo, index) => {
+                        const ttc = parseFloat(values[index + 1]);
+                        ttcData[combo].push(ttc);
+                    });
+                }
+                
+                // Populate dropdowns
+                const dropdowns = [
+                    document.getElementById('combo1'),
+                    document.getElementById('combo2'),
+                    document.getElementById('combo3')
+                ];
+                
+                combinations.forEach(combo => {
+                    dropdowns.forEach((dropdown, index) => {
+                        const option = document.createElement('option');
+                        option.value = combo;
+                        option.text = combo;
+                        if (index === 0 && combo === 'FAST+BRIEF') option.selected = true;
+                        if (index === 1 && combo === 'AKAZE+AKAZE') option.selected = true;
+                        if (index === 2 && combo === 'SIFT+SIFT') option.selected = true;
+                        dropdown.appendChild(option);
+                    });
+                });
+                
+                // Create all combinations chart
+                const allCombinationsCtx = document.getElementById('allCombinationsChart').getContext('2d');
+                const allCombinationsChart = new Chart(allCombinationsCtx, {
+                    type: 'line',
+                    data: {
+                        labels: frameData,
+                        datasets: combinations.map((combo, index) => {
+                            const hue = (index * 360 / combinations.length) % 360;
+                            return {
+                                label: combo,
+                                data: ttcData[combo],
+                                borderColor: `hsl(${hue}, 70%, 50%)`,
+                                backgroundColor: `hsl(${hue}, 70%, 80%)`,
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0.1
+                            };
+                        })
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'TTC (seconds)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Frame'
+                                }
+                            }
+                        },
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'TTC Estimation: All Detector/Descriptor Combinations'
+                            },
+                            legend: {
+                                position: 'right'
+                            }
+                        }
+                    }
+                });
+                
+                // Create comparison chart
+                const comparisonCtx = document.getElementById('comparisonChart').getContext('2d');
+                let comparisonChart = new Chart(comparisonCtx, {
+                    type: 'line',
+                    data: {
+                        labels: frameData,
+                        datasets: [
+                            {
+                                label: 'FAST+BRIEF',
+                                data: ttcData['FAST+BRIEF'],
+                                borderColor: 'rgb(255, 99, 132)',
+                                backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0.1
+                            },
+                            {
+                                label: 'AKAZE+AKAZE',
+                                data: ttcData['AKAZE+AKAZE'],
+                                borderColor: 'rgb(54, 162, 235)',
+                                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0.1
+                            },
+                            {
+                                label: 'SIFT+SIFT',
+                                data: ttcData['SIFT+SIFT'],
+                                borderColor: 'rgb(75, 192, 192)',
+                                backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0.1
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                title: {
+                                    display: true,
+                                    text: 'TTC (seconds)'
+                                }
+                            },
+                            x: {
+                                title: {
+                                    display: true,
+                                    text: 'Frame'
+                                }
+                            }
+                        },
+                        plugins: {
+                            title: {
+                                display: true,
+                                text: 'TTC Estimation: Selected Combinations'
+                            }
+                        }
+                    }
+                });
+                
+                // Function to update comparison chart
+                window.updateComparisonChart = function() {
+                    const selected = [
+                        document.getElementById('combo1').value,
+                        document.getElementById('combo2').value,
+                        document.getElementById('combo3').value
+                    ];
+                    
+                    comparisonChart.data.datasets = selected.map((combo, index) => {
+                        const colors = [
+                            'rgb(255, 99, 132)',
+                            'rgb(54, 162, 235)',
+                            'rgb(75, 192, 192)'
+                        ];
+                        const bgColors = [
+                            'rgba(255, 99, 132, 0.2)',
+                            'rgba(54, 162, 235, 0.2)',
+                            'rgba(75, 192, 192, 0.2)'
+                        ];
+                        
+                        return {
+                            label: combo,
+                            data: ttcData[combo],
+                            borderColor: colors[index],
+                            backgroundColor: bgColors[index],
+                            borderWidth: 2,
+                            fill: false,
+                            tension: 0.1
+                        };
+                    });
+                    
+                    comparisonChart.update();
+                };
+                
+                // Calculate statistics
+                const statsTable = document.getElementById('statsTable');
+                combinations.forEach(combo => {
+                    const data = ttcData[combo];
+                    const mean = data.reduce((a, b) => a + b, 0) / data.length;
+                    const variance = data.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / data.length;
+                    const stdDev = Math.sqrt(variance);
+                    const min = Math.min(...data);
+                    const max = Math.max(...data);
+                    
+                    const [detector, descriptor] = combo.split('+');
+                    
+                    const row = statsTable.insertRow();
+                    row.insertCell(0).textContent = detector;
+                    row.insertCell(1).textContent = descriptor;
+                    row.insertCell(2).textContent = mean.toFixed(2);
+                    row.insertCell(3).textContent = stdDev.toFixed(2);
+                    row.insertCell(4).textContent = min.toFixed(2);
+                    row.insertCell(5).textContent = max.toFixed(2);
+                });
+            })
+            .catch(error => console.error('Error loading data:', error));
+    </script>
+</body>
+</html>

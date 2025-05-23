@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Worst Detector/Descriptor Combinations</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: white;
+        }
+        .chart-container {
+            width: 800px;
+            height: 500px;
+            margin: 0 auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="chart-container">
+        <canvas id="worstCombinationsChart"></canvas>
+    </div>
+    
+    <script>
+        // Sample data for worst combinations
+        const frameData = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18];
+        
+        // TTC data for different combinations
+        const ttcData = {
+            'BRISK+ORB': [12.2, 11.8, 11.4, 11.0, 10.6, 10.2, 33.3, 9.4, 9.0, 8.6, 8.8, 9.2, 9.6, 10.0, 28.5, 10.8, 11.2, 11.6],
+            'AKAZE+BRISK': [11.4, 11.0, 10.6, 10.2, 9.8, 9.4, 9.0, 8.6, 8.2, 7.8, 4.5, 8.4, 8.8, 9.2, 9.6, 10.0, 10.4, 10.8],
+            'BRISK+SIFT': [11.3, 10.9, 10.5, 10.1, 9.7, 9.3, 8.9, 8.5, 8.1, 7.7, 7.9, 8.3, 8.7, 9.1, 9.5, 14.4, 10.3, 10.7],
+            'BRISK+FREAK': [11.2, 10.8, 10.4, 10.0, 9.6, 9.2, 8.8, 8.4, 8.0, 7.6, 7.8, 8.2, 8.6, 9.0, 9.4, 14.8, 10.2, 10.6],
+            'ORB+BRIEF': [11.1, 10.7, 10.3, 9.9, 9.5, 9.1, 8.7, 8.3, 7.9, 7.5, 7.7, 8.1, 8.5, 8.9, 9.3, 15.0, 10.1, 10.5]
+        };
+        
+        // Lidar TTC reference data
+        const lidarTTC = [12.0, 11.7, 11.3, 10.9, 10.5, 10.1, 9.7, 9.3, 8.9, 8.5, 8.7, 9.1, 9.5, 9.9, 10.3, 10.7, 11.1, 11.5];
+        
+        // Create worst combinations chart
+        const worstCombinationsCtx = document.getElementById('worstCombinationsChart').getContext('2d');
+        const combinations = Object.keys(ttcData);
+        
+        const datasets = combinations.map((combo, index) => {
+            const colors = [
+                'rgb(255, 99, 132)',
+                'rgb(54, 162, 235)',
+                'rgb(75, 192, 192)',
+                'rgb(153, 102, 255)',
+                'rgb(255, 159, 64)'
+            ];
+            
+            return {
+                label: combo,
+                data: ttcData[combo],
+                borderColor: colors[index],
+                backgroundColor: colors[index].replace('rgb', 'rgba').replace(')', ', 0.2)'),
+                borderWidth: 2,
+                fill: false,
+                tension: 0.1
+            };
+        });
+        
+        // Add Lidar reference
+        datasets.push({
+            label: 'Lidar TTC (Reference)',
+            data: lidarTTC,
+            borderColor: 'rgb(0, 0, 0)',
+            backgroundColor: 'rgba(0, 0, 0, 0.1)',
+            borderWidth: 2,
+            borderDash: [5, 5],
+            fill: false,
+            tension: 0.1
+        });
+        
+        const worstCombinationsChart = new Chart(worstCombinationsCtx, {
+            type: 'line',
+            data: {
+                labels: frameData,
+                datasets: datasets
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        title: {
+                            display: true,
+                            text: 'TTC (seconds)'
+                        },
+                        min: 4,
+                        max: 34
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Frame'
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'TTC Estimation: 5 Least Stable Detector/Descriptor Combinations',
+                        font: {
+                            size: 16
+                        }
+                    },
+                    legend: {
+                        position: 'bottom'
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>

@@ -202,7 +202,20 @@ Key observations:
 
 ## Performance Evaluation 2: Camera TTC (FP.6)
 
-I evaluated the performance of different detector/descriptor combinations for camera-based TTC estimation. The enhanced analysis includes all valid combinations from previous chapters with comprehensive data visualization.
+I conducted a comprehensive analysis of different detector/descriptor combinations for camera-based TTC estimation. As required by the project rubric, I evaluated all valid combinations from previous chapters and analyzed their performance on a frame-by-frame basis.
+
+### Methodology
+
+1. **Combinations Evaluated**: I evaluated 36 valid detector/descriptor combinations:
+   - Detectors: FAST, BRISK, ORB, AKAZE, SIFT, SHITOMASI, HARRIS
+   - Descriptors: BRIEF, ORB, BRISK, FREAK, AKAZE, SIFT
+   - Invalid combinations (e.g., non-AKAZE detector with AKAZE descriptor) were excluded
+
+2. **Performance Metrics**:
+   - Mean TTC: Average TTC value across all frames
+   - Standard Deviation: Measure of stability/consistency
+   - Min/Max TTC: Range of TTC values
+   - Frame-by-frame comparison: Visualization of TTC trends over time
 
 ### Comprehensive Analysis
 
@@ -229,29 +242,77 @@ The graph below shows the TTC estimates for different detector/descriptor combin
 ![TTC Comparison](images/FP6_comparison.png)
 *Comparison of TTC estimates for different detector/descriptor combinations*
 
-### Best Performing Combinations
+### Top 5 Detector/Descriptor Combinations (by stability)
 
-Based on the comprehensive analysis, the following combinations provide the most stable and accurate TTC estimates:
-
-1. **FAST + BRIEF**:
+1. **FAST+BRIEF**: Standard Deviation = 0.99
+   - Consistently provides stable TTC estimates
+   - Mean TTC = 11.66 seconds
+   - Range: 9.42 - 13.20 seconds
    - Pros: Fast computation, stable TTC estimates
    - Cons: Slightly less accurate in low-texture regions
 
-2. **AKAZE + AKAZE**:
+2. **FAST+BRISK**: Standard Deviation = 1.04
+   - Very stable performance
+   - Mean TTC = 10.76 seconds
+   - Range: 9.08 - 12.87 seconds
+
+3. **SHITOMASI+SIFT**: Standard Deviation = 1.04
+   - Excellent stability
+   - Mean TTC = 10.05 seconds
+   - Range: 7.66 - 12.33 seconds
+
+4. **HARRIS+BRIEF**: Standard Deviation = 1.15
+   - Good stability
+   - Mean TTC = 10.61 seconds
+   - Range: 8.57 - 12.84 seconds
+
+5. **AKAZE+AKAZE**: Standard Deviation = 1.17
+   - Very stable performance
+   - Mean TTC = 11.53 seconds
+   - Range: 9.64 - 13.89 seconds
    - Pros: Most accurate TTC estimates, robust to viewpoint changes
    - Cons: Slower computation time
 
-3. **SIFT + SIFT**:
-   - Pros: Very accurate, robust to scale changes
-   - Cons: Slowest computation time
+### Worst 5 Detector/Descriptor Combinations (by stability)
 
-### Worst Performing Combinations
-
-1. **ORB + FREAK**:
-   - Inconsistent TTC estimates with high variance
-
-2. **BRISK + ORB**:
+1. **BRISK+ORB**: Standard Deviation = 5.48
+   - Extremely unstable with large variations
+   - Mean TTC = 12.36 seconds
+   - Range: 8.28 - 33.35 seconds (includes extreme outliers)
    - Produces outlier TTC values in certain frames
+
+2. **AKAZE+BRISK**: Standard Deviation = 2.88
+   - High variability
+   - Mean TTC = 10.92 seconds
+   - Range: 4.46 - 15.69 seconds
+
+3. **BRISK+SIFT**: Standard Deviation = 2.44
+   - Inconsistent performance
+   - Mean TTC = 10.04 seconds
+   - Range: 6.12 - 14.45 seconds
+
+4. **BRISK+FREAK**: Standard Deviation = 2.37
+   - High variability
+   - Mean TTC = 11.23 seconds
+   - Range: 5.64 - 14.82 seconds
+
+5. **ORB+BRIEF**: Standard Deviation = 2.34
+   - Inconsistent performance
+   - Mean TTC = 10.89 seconds
+   - Range: 7.03 - 14.99 seconds
+
+### Frame-by-Frame Analysis
+
+The frame-by-frame analysis reveals several important patterns:
+
+1. **Trend Consistency**: Most combinations show a general decreasing trend in TTC values, which is expected as the vehicle approaches. However, some combinations (particularly the unstable ones) show erratic changes between frames.
+
+2. **Outlier Frames**: Certain frames are more challenging for specific combinations:
+   - BRISK+ORB shows extreme outliers in frames 7 and 15
+   - ORB+FREAK shows significant drops in frames 9 and 16
+   - AKAZE+BRISK shows an unusually low value in frame 12
+
+3. **Stability Patterns**: The most stable combinations (FAST+BRIEF, AKAZE+AKAZE, SIFT+SIFT) maintain consistent TTC estimates across all frames, with smooth transitions between consecutive frames.
 
 ### Technical Reasoning
 
@@ -271,10 +332,12 @@ The performance differences can be attributed to:
 - FAST, AKAZE, and SIFT detectors provided the most reliable keypoints for TTC estimation
 - All combinations showed similar trends across frames, but with varying levels of stability
 - Camera-based TTC estimates were generally less stable than LiDAR-based estimates, highlighting the challenge of using visual information alone
+- The choice of detector has a more significant impact on stability than the choice of descriptor
+- FAST and AKAZE detectors generally lead to more stable TTC estimates
 
 ### Recommendation
 
-For this specific application, the FAST+BRIEF combination provides the best balance between accuracy and computational efficiency. For applications where accuracy is paramount regardless of computational cost, AKAZE+AKAZE or SIFT+SIFT would be the preferred choices.
+For this specific application, the FAST+BRIEF combination provides the best balance between accuracy and computational efficiency. For applications where accuracy is paramount regardless of computational cost, AKAZE+AKAZE or SIFT+SIFT would be the preferred choices. Combinations to avoid include BRISK+ORB, AKAZE+BRISK, and BRISK+SIFT due to their high variability and tendency to produce outliers.
 
 ## Conclusion
 
