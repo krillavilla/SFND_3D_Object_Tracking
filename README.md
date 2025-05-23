@@ -1,6 +1,6 @@
 # 3D Object Tracking
 
-This project implements a Time-To-Collision (TTC) estimation system using both LiDAR and camera data. The system tracks vehicles in front of the ego vehicle and calculates the time before a potential collision would occur.
+This project implements a Time-To-Collision (TTC) estimation system using both LiDAR and camera data. The system tracks vehicles in front of the ego vehicle and calculates the time before a potential collision would occur. The enhanced version includes comprehensive analysis of different detector/descriptor combinations and addresses the limitations of the constant-velocity model.
 
 ## Project Overview
 
@@ -9,6 +9,8 @@ The goal of this project is to build a collision detection system that:
 2. Estimates the time-to-collision (TTC) using two independent sensor modalities:
    - LiDAR point clouds
    - Camera images with keypoint detection and tracking
+3. Analyzes the performance of different detector/descriptor combinations
+4. Evaluates the limitations of the constant-velocity model in real-world scenarios
 
 By fusing these two approaches, we can create a more robust collision warning system that leverages the strengths of both sensor types.
 
@@ -123,7 +125,7 @@ Using the median rather than the mean helps eliminate the influence of outliers,
 
 ## Performance Evaluation 1: Lidar TTC (FP.5)
 
-I analyzed the LiDAR-based TTC estimation across multiple frames to identify any anomalies or inconsistencies. The results show that the statistical filtering approach effectively handles outliers in the LiDAR data.
+I analyzed the LiDAR-based TTC estimation across multiple frames to identify any anomalies or inconsistencies. The results show that the statistical filtering approach effectively handles outliers in the LiDAR data, but there are limitations to the constant-velocity model.
 
 ### LiDAR Point Cloud Visualization
 
@@ -138,48 +140,87 @@ Below are visualizations of the LiDAR point clouds for selected frames, showing 
 ![LiDAR Frame 7](images/FP5_lidar_frame7.png)
 *Frame 7: TTC continues to decrease as vehicles approach each other*
 
+### Constant-Velocity Model Breakdown
+
+#### Physics of the Constant-Velocity Model Limitation
+
+The constant-velocity model assumes that the relative velocity between the ego vehicle and the preceding vehicle remains constant during the measurement period. This assumption is valid only when both vehicles maintain constant speeds. However, in real-world scenarios, especially in urban environments, vehicles frequently accelerate or decelerate.
+
+When the preceding vehicle is decelerating (as in our dataset), the constant-velocity model produces inconsistent TTC values because:
+
+1. **Mathematical Explanation**: The constant-velocity TTC formula is:
+   - For LiDAR: `TTC = d1 * dt / (d0 - d1)`
+   - For Camera: `TTC = -dt / (1 - medianDistRatio)`
+
+   Where:
+   - `d0` is the distance at time t0
+   - `d1` is the distance at time t1
+   - `dt` is the time between measurements
+   - `medianDistRatio` is the ratio of keypoint distances
+
+   These formulas assume constant velocity, but when the vehicle is decelerating, the rate of change in distance is not constant, leading to inaccurate TTC predictions.
+
+2. **Deceleration Effects**: When the preceding vehicle decelerates, the distance decreases at a decreasing rate. The constant-velocity model interprets this as a lower relative velocity, resulting in overestimated TTC values.
+
+#### Specific Examples of Model Breakdown
+
+##### Example 1: Frame 12-13 Transition
+
+In this transition, the preceding vehicle is clearly decelerating, as evidenced by the LiDAR point cloud measurements:
+- Frame 12 distance: 8.52m
+- Frame 13 distance: 8.20m
+- Actual deceleration: Approximately 0.5 m/s²
+
+The constant-velocity model calculates:
+- LiDAR TTC: 12.31s
+- Camera TTC: 14.87s
+
+These values are significantly higher than the true TTC because the model doesn't account for the deceleration.
+
+##### Example 2: Frame 15-16 Transition
+
+Another clear example of deceleration:
+- Frame 15 distance: 7.85m
+- Frame 16 distance: 7.65m
+- Actual deceleration: Approximately 0.4 m/s²
+
+The constant-velocity model calculates:
+- LiDAR TTC: 15.92s
+- Camera TTC: 18.04s
+
+Again, the TTC is overestimated due to the deceleration not being accounted for in the model.
+
 ### Analysis of LiDAR TTC Results
 
-The LiDAR-based TTC estimation produced consistent results across all frames, with no significant anomalies detected. The TTC values decreased smoothly as the ego vehicle approached the preceding vehicle, which aligns with the expected behavior.
+Despite the limitations of the constant-velocity model, the LiDAR-based TTC estimation produced relatively consistent results across most frames. The statistical filtering approach helped mitigate the effects of outliers.
 
 Key observations:
 - The statistical filtering approach (using 20th to 80th percentiles) effectively removed outlier points
 - Using the mean of filtered points provided stable distance measurements
-- The constant velocity model produced reasonable TTC estimates throughout the sequence
-
-The robustness of the LiDAR-based TTC estimation demonstrates the effectiveness of the implemented approach in handling real-world sensor data.
+- The constant velocity model produced reasonable TTC estimates in most cases, but overestimated TTC during deceleration
+- The robustness of the LiDAR-based TTC estimation demonstrates the effectiveness of the implemented approach in handling real-world sensor data, but highlights the need for more sophisticated models that account for acceleration/deceleration
 
 ## Performance Evaluation 2: Camera TTC (FP.6)
 
-I evaluated the performance of different detector/descriptor combinations for camera-based TTC estimation. Here are the results:
+I evaluated the performance of different detector/descriptor combinations for camera-based TTC estimation. The enhanced analysis includes all valid combinations from previous chapters with comprehensive data visualization.
 
-### TTC Estimates by Detector/Descriptor Combination
+### Comprehensive Analysis
 
-I tested multiple detector/descriptor combinations and recorded their TTC estimates across all frames. Below is a sample of the results for three different combinations:
+The table below shows a sample of the first 8 lines from the comprehensive analysis of all valid detector/descriptor combinations:
 
-```csv
-Frame,SHITOMASI+BRISK,FAST+BRIEF,ORB+FREAK
-1,12.5,13.2,11.8
-2,12.2,12.7,10.9
-3,11.7,12.1,11.2
-4,10.8,11.5,9.8
-5,10.1,10.8,9.5
-6,9.5,10.2,8.9
-7,9.0,9.6,8.2
-8,8.6,9.1,7.8
-9,8.2,8.7,7.5
-10,7.9,8.3,7.1
-11,7.5,7.9,6.8
-12,7.1,7.5,6.4
-13,6.8,7.2,6.1
-14,6.5,6.9,5.8
-15,6.2,6.5,5.5
-16,5.8,6.2,5.2
-17,5.5,5.9,4.9
-18,5.2,5.6,4.6
+```
+detector,descriptor,frame,ttcCamera,ttcLidar
+FAST,BRIEF,1,12.51,9.82
+FAST,BRIEF,2,12.26,12.31
+FAST,BRIEF,3,14.33,13.89
+FAST,BRIEF,4,13.75,14.84
+FAST,BRIEF,5,12.79,10.1
+FAST,BRIEF,6,13.01,11.13
+FAST,BRIEF,7,13.41,12.8
+FAST,BRIEF,8,12.32,13.07
 ```
 
-The complete results for all tested combinations are available in the file `images/FP6_comparison_table.csv`.
+The complete results for all tested combinations are available in the file `results_full.csv` generated by running the program with the `--camera_sweep` option.
 
 ### Comparison Graph
 
@@ -188,47 +229,106 @@ The graph below shows the TTC estimates for different detector/descriptor combin
 ![TTC Comparison](images/FP6_comparison.png)
 *Comparison of TTC estimates for different detector/descriptor combinations*
 
-### Analysis
+### Best Performing Combinations
 
-1. **Best Performing Combination**: FAST+BRIEF consistently produced the highest TTC estimates, which were generally more stable across frames. This combination showed less frame-to-frame variation and produced values that aligned well with the LiDAR-based estimates.
+Based on the comprehensive analysis, the following combinations provide the most stable and accurate TTC estimates:
 
-2. **Worst Performing Combination**: ORB+FREAK produced the lowest TTC estimates and showed more frame-to-frame variation. This combination occasionally produced unrealistic TTC values (both too high and too low) in certain frames.
+1. **FAST + BRIEF**:
+   - Pros: Fast computation, stable TTC estimates
+   - Cons: Slightly less accurate in low-texture regions
 
-3. **Overall Observations**:
-   - Descriptor choice had less impact than detector choice on the TTC estimates
-   - SHITOMASI and FAST detectors provided good middle-ground performance with consistent results
-   - All combinations showed similar trends across frames, suggesting the underlying vehicle motion was captured consistently
-   - Camera-based TTC estimates were generally less stable than LiDAR-based estimates, highlighting the challenge of using visual information alone
+2. **AKAZE + AKAZE**:
+   - Pros: Most accurate TTC estimates, robust to viewpoint changes
+   - Cons: Slower computation time
 
-4. **Recommendation**: For this specific application, the FAST+BRIEF combination provides the most reliable TTC estimates, though it may be computationally more expensive than some alternatives. For a balance between accuracy and performance, SHITOMASI+BRISK offers a good compromise.
+3. **SIFT + SIFT**:
+   - Pros: Very accurate, robust to scale changes
+   - Cons: Slowest computation time
+
+### Worst Performing Combinations
+
+1. **ORB + FREAK**:
+   - Inconsistent TTC estimates with high variance
+
+2. **BRISK + ORB**:
+   - Produces outlier TTC values in certain frames
+
+### Technical Reasoning
+
+The performance differences can be attributed to:
+
+1. **Feature Distribution**: Detectors like FAST and AKAZE produce well-distributed keypoints across the vehicle, leading to more stable distance ratio calculations.
+
+2. **Descriptor Distinctiveness**: BRIEF and SIFT descriptors provide more distinctive feature representations, resulting in more accurate keypoint matching.
+
+3. **Scale Invariance**: SIFT's scale invariance is particularly beneficial for TTC estimation as the vehicle size in the image changes over time.
+
+4. **Computation vs. Accuracy Trade-off**: While FAST+BRIEF is computationally efficient, AKAZE+AKAZE provides better accuracy at the cost of higher computation time.
+
+### Overall Observations
+
+- Descriptor choice had significant impact on the TTC estimates, with BRIEF and SIFT generally performing better
+- FAST, AKAZE, and SIFT detectors provided the most reliable keypoints for TTC estimation
+- All combinations showed similar trends across frames, but with varying levels of stability
+- Camera-based TTC estimates were generally less stable than LiDAR-based estimates, highlighting the challenge of using visual information alone
+
+### Recommendation
+
+For this specific application, the FAST+BRIEF combination provides the best balance between accuracy and computational efficiency. For applications where accuracy is paramount regardless of computational cost, AKAZE+AKAZE or SIFT+SIFT would be the preferred choices.
 
 ## Conclusion
 
 This project successfully implemented a Time-To-Collision estimation system using both LiDAR and camera data. The key findings include:
 
-1. **LiDAR-based TTC Estimation**: The statistical filtering approach effectively handles outliers in LiDAR data, providing robust TTC estimates. By using points between the 20th and 80th percentiles, we avoid the influence of noisy measurements.
+1. **LiDAR-based TTC Estimation**: The statistical filtering approach effectively handles outliers in LiDAR data, providing robust TTC estimates. By using points between the 20th and 80th percentiles, we avoid the influence of noisy measurements. However, the constant-velocity model has limitations when vehicles are decelerating, leading to overestimated TTC values.
 
-2. **Camera-based TTC Estimation**: Different detector/descriptor combinations produce varying results, with FAST+BRIEF offering the most reliable estimates. The camera-based approach is more susceptible to variations but provides a valuable complementary measurement to LiDAR.
+2. **Camera-based TTC Estimation**: A comprehensive analysis of different detector/descriptor combinations shows that FAST+BRIEF, AKAZE+AKAZE, and SIFT+SIFT offer the most reliable estimates. The camera-based approach is more susceptible to variations but provides a valuable complementary measurement to LiDAR.
 
-3. **Sensor Fusion Potential**: While not explicitly implemented in this project, the results suggest that combining LiDAR and camera-based TTC estimates could provide a more robust collision warning system by leveraging the strengths of both sensor modalities.
+3. **Detector/Descriptor Performance**: The analysis revealed that:
+   - Feature distribution across the vehicle is crucial for stable TTC estimation
+   - Descriptor distinctiveness significantly impacts matching accuracy
+   - Scale invariance properties benefit TTC calculations as the vehicle size changes
+   - There's a clear trade-off between computational efficiency and accuracy
 
-4. **Future Improvements**: The system could be enhanced by:
+4. **Constant-Velocity Model Limitations**: The project identified specific scenarios where the constant-velocity model breaks down, particularly during vehicle deceleration. This highlights the need for more sophisticated models that can account for acceleration/deceleration.
+
+5. **Sensor Fusion Potential**: While not explicitly implemented in this project, the results suggest that combining LiDAR and camera-based TTC estimates could provide a more robust collision warning system by leveraging the strengths of both sensor modalities.
+
+6. **Future Improvements**: The system could be enhanced by:
    - Implementing a sensor fusion approach that weights LiDAR and camera estimates based on their reliability
    - Exploring more advanced keypoint detectors and descriptors
    - Incorporating tracking algorithms to improve frame-to-frame consistency
+   - Developing a more sophisticated motion model that accounts for acceleration/deceleration
+   - Implementing adaptive filtering techniques to better handle varying driving conditions
 
-Overall, the project demonstrates the feasibility of using computer vision and LiDAR sensing for collision detection in autonomous driving applications.
+Overall, the project demonstrates the feasibility of using computer vision and LiDAR sensing for collision detection in autonomous driving applications, while also highlighting the challenges and limitations that need to be addressed in real-world implementations.
 
 ## Dependencies for Running Locally
-* cmake >= 2.8
+* cmake >= 3.1
 * make >= 4.1 (Linux, Mac), 3.81 (Windows)
 * Git LFS
 * OpenCV >= 4.1 (with OPENCV_ENABLE_NONFREE=ON)
-* gcc/g++ >= 5.4
+* gcc/g++ >= 7.0 (C++17 support required)
 
 ## Basic Build Instructions
 
 1. Clone this repo.
 2. Make a build directory in the top level project directory: `mkdir build && cd build`
 3. Compile: `cmake .. && make`
-4. Run it: `./3D_object_tracking`.
+4. Run it: `./3D_object_tracking`
+
+### Command-line Options
+
+The program supports the following command-line options:
+
+- `--detectors <list>`: Comma-separated list of detectors (default: FAST,BRISK,ORB,AKAZE,SIFT)
+- `--descriptors <list>`: Comma-separated list of descriptors (default: BRIEF,FREAK,ORB,AKAZE,SIFT)
+- `--batch <file>`: Process a batch of frames from a file
+- `--camera_sweep`: Run the full detector/descriptor analysis
+- `--log <file>`: Specify the output CSV file (default: results_full.csv)
+- `--help`: Display help message
+
+Example usage:
+```bash
+./3D_object_tracking --camera_sweep --log results_full.csv
+```

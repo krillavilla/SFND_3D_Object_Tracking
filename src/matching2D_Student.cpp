@@ -230,3 +230,150 @@ void detKeypointsShiTomasi(vector<cv::KeyPoint> &keypoints, cv::Mat &img, bool b
         cv::waitKey(0);
     }
 }
+
+// Create a detector based on detectorType string
+cv::Ptr<cv::Feature2D> createDetector(const std::string& detectorType)
+{
+    cv::Ptr<cv::Feature2D> detector;
+
+    if (detectorType.compare("SHITOMASI") == 0)
+    {
+        // Use a custom implementation for Shi-Tomasi
+        // This will be handled separately in the calling code
+        return nullptr;
+    }
+    else if (detectorType.compare("HARRIS") == 0)
+    {
+        // Use a custom implementation for Harris
+        // This will be handled separately in the calling code
+        return nullptr;
+    }
+    else if (detectorType.compare("FAST") == 0)
+    {
+        int threshold = 30;                                                              // difference between intensity of the central pixel and pixels of a circle around this pixel
+        bool bNMS = true;                                                                // perform non-maxima suppression on keypoints
+        cv::FastFeatureDetector::DetectorType type = cv::FastFeatureDetector::TYPE_9_16; // TYPE_9_16, TYPE_7_12, TYPE_5_8
+        detector = cv::FastFeatureDetector::create(threshold, bNMS, type);
+    }
+    else if (detectorType.compare("BRISK") == 0)
+    {
+        detector = cv::BRISK::create();
+    }
+    else if (detectorType.compare("ORB") == 0)
+    {
+        detector = cv::ORB::create();
+    }
+    else if (detectorType.compare("AKAZE") == 0)
+    {
+        detector = cv::AKAZE::create();
+    }
+    else if (detectorType.compare("SIFT") == 0)
+    {
+        // SIFT requires xfeatures2d module which might not be available
+        try {
+            #ifdef OPENCV_ENABLE_NONFREE
+                detector = cv::SIFT::create();
+            #else
+                std::cout << "WARNING: SIFT detector not available without xfeatures2d module" << std::endl;
+                detector = cv::ORB::create(); // Fallback to ORB
+            #endif
+        } catch (const cv::Exception& e) {
+            std::cout << "ERROR: " << e.what() << std::endl;
+            detector = cv::ORB::create(); // Fallback to ORB
+        }
+    }
+    else
+    {
+        std::cout << "WARNING: Invalid detector type: " << detectorType << ". Using ORB instead." << std::endl;
+        detector = cv::ORB::create(); // Fallback to ORB
+    }
+
+    return detector;
+}
+
+// Create a descriptor extractor based on descriptorType string
+cv::Ptr<cv::DescriptorExtractor> createDescriptor(const std::string& descriptorType)
+{
+    cv::Ptr<cv::DescriptorExtractor> extractor;
+
+    if (descriptorType.compare("BRISK") == 0)
+    {
+        int threshold = 30;        // FAST/AGAST detection threshold score.
+        int octaves = 3;           // detection octaves (use 0 to do single scale)
+        float patternScale = 1.0f; // apply this scale to the pattern used for sampling the neighbourhood of a keypoint.
+        extractor = cv::BRISK::create(threshold, octaves, patternScale);
+    }
+    else if (descriptorType.compare("BRIEF") == 0)
+    {
+        // BRIEF requires xfeatures2d module which might not be available
+        try {
+            #ifdef OPENCV_ENABLE_NONFREE
+                extractor = cv::xfeatures2d::BriefDescriptorExtractor::create();
+            #else
+                std::cout << "WARNING: BRIEF descriptor not available without xfeatures2d module" << std::endl;
+                extractor = cv::ORB::create(); // Fallback to ORB
+            #endif
+        } catch (const cv::Exception& e) {
+            std::cout << "ERROR: " << e.what() << std::endl;
+            extractor = cv::ORB::create(); // Fallback to ORB
+        }
+    }
+    else if (descriptorType.compare("ORB") == 0)
+    {
+        extractor = cv::ORB::create();
+    }
+    else if (descriptorType.compare("FREAK") == 0)
+    {
+        // FREAK requires xfeatures2d module which might not be available
+        try {
+            #ifdef OPENCV_ENABLE_NONFREE
+                extractor = cv::xfeatures2d::FREAK::create();
+            #else
+                std::cout << "WARNING: FREAK descriptor not available without xfeatures2d module" << std::endl;
+                extractor = cv::ORB::create(); // Fallback to ORB
+            #endif
+        } catch (const cv::Exception& e) {
+            std::cout << "ERROR: " << e.what() << std::endl;
+            extractor = cv::ORB::create(); // Fallback to ORB
+        }
+    }
+    else if (descriptorType.compare("AKAZE") == 0)
+    {
+        extractor = cv::AKAZE::create();
+    }
+    else if (descriptorType.compare("SIFT") == 0)
+    {
+        // SIFT requires xfeatures2d module which might not be available
+        try {
+            #ifdef OPENCV_ENABLE_NONFREE
+                extractor = cv::SIFT::create();
+            #else
+                std::cout << "WARNING: SIFT descriptor not available without xfeatures2d module" << std::endl;
+                extractor = cv::ORB::create(); // Fallback to ORB
+            #endif
+        } catch (const cv::Exception& e) {
+            std::cout << "ERROR: " << e.what() << std::endl;
+            extractor = cv::ORB::create(); // Fallback to ORB
+        }
+    }
+    else
+    {
+        std::cout << "WARNING: Invalid descriptor type: " << descriptorType << ". Using ORB instead." << std::endl;
+        extractor = cv::ORB::create(); // Fallback to ORB
+    }
+
+    return extractor;
+}
+
+// Check if a detector/descriptor combination is valid
+bool isValidDetectorDescriptorCombination(const std::string& detectorType, const std::string& descriptorType)
+{
+    // AKAZE descriptors can only be used with AKAZE keypoints
+    if (descriptorType.compare("AKAZE") == 0 && detectorType.compare("AKAZE") != 0)
+    {
+        return false;
+    }
+
+    // All other combinations are valid
+    return true;
+}

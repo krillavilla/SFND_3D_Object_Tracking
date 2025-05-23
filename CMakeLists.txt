@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
-add_definitions(-std=c++11)
+add_definitions(-std=c++17)
 
 set(CXX_FLAGS "-Wall")
 set(CMAKE_CXX_FLAGS, "${CXX_FLAGS}")
@@ -22,5 +22,13 @@ else()
 endif()
 
 # Executable for create matrix exercise
-add_executable (3D_object_tracking src/camFusion_Student.cpp src/FinalProject_Camera.cpp src/lidarData.cpp src/matching2D_Student.cpp src/objectDetection2D.cpp)
+# Add camera_sweep.cpp to the source files
+add_executable(3D_object_tracking
+        src/FinalProject_Camera.cpp
+        src/camera_sweep.cpp
+        src/matching2D_Student.cpp
+        src/objectDetection2D.cpp
+        src/lidarData.cpp
+        src/camFusion_Student.cpp
+)
 target_link_libraries (3D_object_tracking ${OpenCV_LIBRARIES})

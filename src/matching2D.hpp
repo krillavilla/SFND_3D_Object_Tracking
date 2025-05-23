@@ -25,4 +25,13 @@ void descKeypoints(std::vector<cv::KeyPoint> &keypoints, cv::Mat &img, cv::Mat &
 void matchDescriptors(std::vector<cv::KeyPoint> &kPtsSource, std::vector<cv::KeyPoint> &kPtsRef, cv::Mat &descSource, cv::Mat &descRef,
                       std::vector<cv::DMatch> &matches, std::string descriptorType, std::string matcherType, std::string selectorType);
 
+// Create a detector based on detectorType string
+cv::Ptr<cv::Feature2D> createDetector(const std::string& detectorType);
+
+// Create a descriptor extractor based on descriptorType string
+cv::Ptr<cv::DescriptorExtractor> createDescriptor(const std::string& descriptorType);
+
+// Check if a detector/descriptor combination is valid
+bool isValidDetectorDescriptorCombination(const std::string& detectorType, const std::string& descriptorType);
+
 #endif /* matching2D_hpp */
